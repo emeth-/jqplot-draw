@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>jqplot - draw</title>
+        <link rel="stylesheet" type="text/css" href="./css/style.css">
+        <link rel="stylesheet" type="text/css" href="./css/bootstrap-icon.css">
+        <style type="text/css">
+        #drawr {
+            overflow: hidden;
+            height: 320px;s
+        }
+        #drawr div#legend, #drawr div#graph {
+            float:left;
+        }
+        #drawr div#legend {
+            width: 165px;
+            border-right: 1px solid #f0f0f0;
+            margin-right: 10px;
+        }
+        div#legend a {
+            padding: 4px;
+            line-height: 33px;
+            vertical-align: top;
+            text-decoration: none;
+        }
+        div#legend p {
+            padding-top: 4px;
+        }
+        .legenz {
+            background-image: url('./img/planworkleg.png');
+            background-repeat: no-repeat;
+            display: inline-block;
+            width: 40px;
+            height: 33px;
+        }
+        #leg_sls { background-position: -100px 0; }
+        #leg_sls_cur { background-position: -50px 0; }
+        #leg_sls_pri { background-position: -100px -33px; }
+        #leg_inv { background-position: 0 0; }
+        #leg_mkd { background-position: -50px -33px; }
+        #leg_rcv { background-position: 0 -33px; }
+        .drawicons {
+            cursor: pointer;
+            margin-top: -9px;
+        }
+        </style>
+        
+        
+        
+        
+        <script src="http://code.jquery.com/jquery-1.8.3.js"></script>
+        <script type="text/javascript" src="http://code.jquery.com/ui/1.9.2/jquery-ui.js"></script>
+        <link type="text/css" href="http://code.jquery.com/ui/1.9.2/themes/base/jquery-ui.css" rel="stylesheet">
+        <link rel="stylesheet" type="text/css" href="./css/jquery.jqplot.css">
+        <script type="text/javascript" src="./js/jquery.jqplot.min.js"></script>
+        <script type="text/javascript" src="./js/jqplot.categoryAxisRenderer.min.js"></script>
+        <script type="text/javascript" src="./js/jqplot.barRenderer.min.js"></script>
+        <script type="text/javascript" src="./js/jqplot.cursor.min.js"></script>
+        <script type="text/javascript" src="./js/jqplot.highlighter.min.js"></script>
+        <script type="text/javascript" src="./js/jqplot.dragable.min.js"></script>
+        <script src="./js/jquery.ui.touchfix.js"></script>
+        <script>
+        var plot1 = "slurpee";
+        var dirtybit = 0;
+        var show_sales_line = true;
+        var show_inventory_line = true;
+        var show_markdown_line = true;
+        var show_receiving_line = true;
+        var show_salescurr_line = false;
+        var show_salesprior_line = false;
+        var dataz = {};
+        dataz['sales'] = [910, 585, 521, 801, 680, 350, 103, 292, 191, 282, 634, 222];
+        dataz['inventory'] = [619, 380, 357, 786, 616, 293, 698, 455, 173, 530, 802, 186];
+        dataz['markdowns'] = [357, 190, 825, 795, 993, 684, 242, 529, 710, 370, 279, 865];
+        dataz['receivings'] = [321, 577, 476, 862, 334, 596, 355, 196, 854, 684, 699, 630];
+        dataz['sales_current'] = [424, 304, 958, 863, 600, 139, 190, 800, 607, 808, 798, 101];
+        dataz['sales_prior'] = [294, 707, 643, 960, 357, 463, 122, 554, 708, 933, 646, 747];
+        
+        jQuery(document).ready(function () {
+        
+            build_chart_from_userinput();
+            jQuery.jqplot.postDrawSeriesHooks.push(updatedSeries);
+            jQuery.jqplot.config.enablePlugins = true;
+        
+        });
+        function toggle_line(linename)
+        {
+            var currval = eval(linename);
+            if (currval == true)
+            {
+                eval(linename+" = false;");
+                jQuery('#'+linename).css('font-weight', 'normal');
+            }
+            else
+            {
+                eval(linename+" = true;");
+                jQuery('#'+linename).css('font-weight', 'bold');
+            }
+            
+            build_chart_from_userinput();
+        }
+        
+        function updatedSeries(sctx, options)
+        {
+            if (dirtybit > 0)
+                dirtybit -= 1;
+            else
+            {
+                for (var i=0; i< 12; i++)
+                {
+                    dataz['sales'][i] = Math.round(plot1.series[0].data[i][1]);
+                    dataz['inventory'][i] = Math.round(plot1.series[1].data[i][1]);
+                    dataz['markdowns'][i] = Math.round(plot1.series[2].data[i][1]);
+                }
+            }
+        }
+        
+        function redraw_from_input()
+        {
+            dirtybit = 6; //one per series
+            build_chart_from_userinput();
+        }
+        
+        function destroy_chart()
+        {
+            /*
+            //significantly slower.
+            for (var i=0; i< 12; i++)
+            {
+                plot1.series[0].data[i][1] = dataz['sales'][i];
+            }
+            plot1.replot();
+            */
+            
+            if (plot1 != "slurpee")
+                plot1.destroy();
+            jQuery('#chart1').remove();
+            jQuery('#chartcontainer').append("<div id='chart1'></div>");
+            
+        }
+            
+        function build_chart_from_userinput()
+        {
+            destroy_chart();
+            var ticks = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+            
+            yaxisformatter = function(format, val) {
+                var tmp = parseInt(val);
+                var tmps = tmp.toString();
+                while (tmps.length < 6)
+                {
+                    tmps = '0' + tmps;
+                }
+                return tmps;
+            }
+            
+            plot1 = $.jqplot('chart1',[dataz['sales'], dataz['inventory'], dataz['markdowns'], dataz['receivings'], dataz['sales_current'], dataz['sales_prior']],{
+                title: '',
+                axes: {
+                    xaxis: {
+                        renderer: $.jqplot.CategoryAxisRenderer,
+                        ticks: ticks
+                    },
+                    yaxis: {
+                        min: 0,
+                        tickOptions: {
+                            formatter: yaxisformatter
+                        }
+                    }
+                },
+                series:[
+                    {
+                        dragable: {
+                            constrainTo: 'y'
+                        },
+                        isDragable: true,
+                        lineWidth:2,
+                        markerOptions: { style:'filledDiamond' },
+                        highlighter: {tooltipFormatString: '<b><i><span style="color:red;">Sales Plan</span></i></b> %d'},
+                        show: show_sales_line
+                    },
+                    {
+                        dragable: {
+                            constrainTo: 'y'
+                        },
+                        isDragable: true,
+                        lineWidth:2,
+                        markerOptions: { style:'filledSquare' },
+                        highlighter: {tooltipFormatString: '<b><i><span style="color:red;">Inventory Plan</span></i></b> %d'},
+                        show: show_inventory_line
+                    },
+                    {
+                        dragable: {
+                            constrainTo: 'y'
+                        },
+                        isDragable: true,
+                        lineWidth:2,
+                        markerOptions: { style:'x' },
+                        highlighter: {tooltipFormatString: '<b><i><span style="color:red;">Markdowns Plan</span></i></b> %d'},
+                        show: show_markdown_line
+                    },
+                    {
+                        lineWidth:2,
+                        isDragable: false,
+                        markerOptions: { style:'filledCircle' },
+                        highlighter: {tooltipFormatString: '<b><i><span style="color:red;">Receivings Plan</span></i></b> %d'},
+                        show: show_receiving_line
+                    },
+                    {
+                        lineWidth:2,
+                        isDragable: false,
+                        markerOptions: { style:'plus', color:'#66FF00' },
+                        highlighter: {tooltipFormatString: '<b><i><span style="color:red;">Sales Curr</span></i></b> %d'},
+                        show: show_salescurr_line
+                    },
+                    {
+                        lineWidth:2,
+                        isDragable: false,
+                        markerOptions: { style:'dash', color:'#66FF00' },
+                        highlighter: {tooltipFormatString: '<b><i><span style="color:red;">Sales Prior</span></i></b> %d'},
+                        show: show_salesprior_line
+                    }
+                ],
+                highlighter: {
+                    show: true,
+                    bringSeriesToFront: true,
+                    sizeAdjust: 10,
+                    tooltipLocation: 'n',
+                    tooltipAxes: 'y',
+                    useAxesFormatters: false
+                },
+                cursor: {
+                    show: true
+                }
+            });
+        }
+        
+        </script>
+            
+            
+            
+            
+        <script type="text/javascript">
+        var oCanvas;
+        var oCtx;
+        var iWidth;
+        var iHeight;
+        var oCanvasOffset;
+        var ourXValues = [83,159,235,311,387,463,539,615,692,768,844,920]
+        jQuery(window).resize(function () {
+            oCanvasOffset = jQuery(oCanvas).offset();
+        });
+        jQuery(document).ready(function() {
+            var bMouseIsDown = false;
+            
+            oCanvas = document.getElementById("plannerCanvas");
+            oCtx = oCanvas.getContext("2d");
+            oCanvasOffset = jQuery(oCanvas).offset();
+        
+            iWidth = oCanvas.width;
+            iHeight = oCanvas.height;
+        
+            oCanvas.onmousedown = function(e) {
+                bMouseIsDown = true;
+                iLastX = e.clientX - oCanvasOffset.left + (window.pageXOffset||document.body.scrollLeft||document.documentElement.scrollLeft);
+                iLastY = e.clientY - oCanvasOffset.top + (window.pageYOffset||document.body.scrollTop||document.documentElement.scrollTop);
+            }
+            oCanvas.onmousemove = function(e) {
+                if (bMouseIsDown)
+                {
+                    var iX = e.clientX - oCanvasOffset.left + (window.pageXOffset||document.body.scrollLeft||document.documentElement.scrollLeft);
+                    var iY = e.clientY - oCanvasOffset.top + (window.pageYOffset||document.body.scrollTop||document.documentElement.scrollTop);
+                    oCtx.moveTo(iLastX, iLastY);
+                    oCtx.lineTo(iX, iY);
+                    oCtx.stroke();
+                    iLastX = iX;
+                    iLastY = iY;
+                }
+            }
+            oCanvas.onmouseup = function() {
+                bMouseIsDown = false;
+                iLastX = -1;
+                iLastY = -1;
+                //trigger draw
+                after_planner_draw();
+            }
+        });
+        
+        function after_planner_draw()
+        {
+            imageData = oCtx.getImageData(0, 0, iWidth, iHeight);
+            pData = imageData.data;
+            
+            var topEle = [];
+            for (var x=0; x < iWidth; x++)
+            {
+                topEle.push(-1); //populate topele
+            }
+            // loop through each column, get the top y value
+            for (var y=0; y < iHeight; y++) { 
+                for (var x = 0; x < iWidth; x++) {
+                    //var red = pData[((iWidth * y) + x) * 4];
+                    var green = pData[((iWidth * y) + x) * 4 + 1];
+                    //var blue = pData[((iWidth * y) + x) * 4 + 2];
+                    if (green > 0)
+                    {
+                        if (y < topEle[x] || topEle[x] == -1)
+                        {
+                            topEle[x] = y;
+                        }
+                    }
+                }
+            }
+            
+            var lineVals = new Array();
+            for(var i = 0; i<ourXValues.length; i++)
+            {
+                lineVals.push(topEle[ourXValues[i]]);
+            }
+            
+            //adjust for zero value (first value), flip the y to bottom axis.
+            for(var i=0; i<lineVals.length; i++)
+            {
+                if (lineVals[i] == -1) //no line here
+                {
+                    lineVals[i] = 0;
+                }
+                else
+                {
+                    lineVals[i] = iHeight - lineVals[i];
+                    if (lineVals[i] < 0)
+                    {
+                        lineVals[i] = 0;
+                    }
+                }
+            }
+            draw_sales_from_ratio(lineVals);
+        }
+        function draw_sales_from_ratio(lineVals)
+        {
+            var totLV = 0;
+            for(var i=0; i<lineVals.length; i++)
+                totLV += lineVals[i];
+            var ratios = [];
+            for(var i=0; i<lineVals.length; i++)
+            {
+                ratios.push(parseFloat(lineVals[i]) / totLV);
+            }
+            
+            var sumTotal = 0;
+            for (var i=0; i < 12; i++)
+            {
+                if (drawing_which == 'sales_plan')
+                    sumTotal += parseInt(dataz['sales'][i]);
+                if (drawing_which == 'inventory_plan')
+                    sumTotal += parseInt(dataz['inventory'][i]);
+                if (drawing_which == 'markdowns_plan')
+                    sumTotal += parseInt(dataz['markdowns'][i]);
+            }
+            
+            var newGraphValues = [];
+            for (var i=0; i < 12; i++)
+                newGraphValues.push(Math.round(ratios[i] * sumTotal));
+        
+            dirtybit = 6;
+            for (var i=0; i < 12; i++)
+            {
+                if (drawing_which == 'sales_plan')
+                    dataz['sales'][i] = newGraphValues[i];
+                if (drawing_which == 'inventory_plan')
+                    dataz['inventory'][i] = newGraphValues[i];
+                if (drawing_which == 'markdowns_plan')
+                    dataz['markdowns'][i] = newGraphValues[i];
+            }
+            build_chart_from_userinput();
+            cancel_drawing();
+            drawing_which = "";
+        }
+        var drawing_which = "";
+        function begin_drawing(t, which)
+        {
+            cancel_drawing();
+            if (which == drawing_which)
+            {
+                drawing_which = "";
+                return;
+            }
+            jQuery(t).attr('class', 'icon-remove drawicons tool_top');
+            drawing_which = which;
+            oCanvas = document.getElementById("plannerCanvas");
+            oCtx = oCanvas.getContext("2d");
+            oCtx.clearRect(0, 0, oCanvas.width, oCanvas.height);
+        
+            //right
+            oCtx.fillStyle = "#EFFDF4";
+            oCtx.fillRect (960,0,44,270);
+            
+            oCtx.font = "10pt sans-serif";
+            oCtx.fillStyle = "#000000";
+            oCtx.fillText("D", 975, 15);
+            oCtx.fillText("r", 975, 30);
+            oCtx.fillText("a", 975, 45);
+            oCtx.fillText("w", 975, 60);
+            oCtx.fillText("i", 975, 75);
+            oCtx.fillText("n", 975, 90);
+            oCtx.fillText("g", 975, 105);
+            oCtx.fillText("", 975, 120);
+            oCtx.fillText("M", 975, 135);
+            oCtx.fillText("o", 975, 150);
+            oCtx.fillText("d", 975, 165);
+            oCtx.fillText("e", 975, 180);
+            oCtx.fillText("", 975, 195);
+            oCtx.fillText("O", 975, 210);
+            oCtx.fillText("n", 975, 225);
+            
+            oCtx.beginPath();
+            oCtx.strokeStyle = '#1F7421'; 
+            oCtx.lineWidth   = 4;
+            jQuery('#plannerCanvas').css('visibility', 'visible');
+        }
+        function cancel_drawing()
+        {
+            jQuery('.icon-remove').attr('class', 'icon-pencil drawicons tool_top');
+            jQuery('#plannerCanvas').css('visibility', 'hidden');
+        }
+        </script>
+            
+        <style>
+        #plannerCanvas {
+            position: relative;
+            top: 0;
+            z-index:9999;
+        }
+        </style>
+    
+    </head>
+    <body>
+        <div id="drawr" class="surround">
+            <div id="legend">
+                <p></p><div class="legenz" id="leg_sls"></div><a class="v-ellip" href="javascript:void(0);" onclick="toggle_line('show_sales_line')" id="show_sales_line" style="font-weight:bold;">Sales Plan</a><i class="icon-pencil icon-remove drawicons tool_top" onclick="begin_drawing(this, 'sales_plan');" data-original-title="Draw Sales Plan Graph"> </i><p></p>
+                <p></p><div class="legenz" id="leg_sls_cur"></div><a class="v-ellip" href="javascript:void(0);" onclick="toggle_line('show_salescurr_line')" id="show_salescurr_line">Sales Curr</a><p></p>
+                <p></p><div class="legenz" id="leg_sls_pri"></div><a class="v-ellip" href="javascript:void(0);" onclick="toggle_line('show_salesprior_line')" id="show_salesprior_line">Sales Prior</a><p></p>
+                <p></p><div class="legenz" id="leg_inv"></div><a class="v-ellip" href="javascript:void(0);" onclick="toggle_line('show_inventory_line')" id="show_inventory_line" style="font-weight:bold;">Inventory Plan</a><i class="icon-pencil drawicons tool_top" onclick="begin_drawing(this, 'inventory_plan');" data-original-title="Draw Inventory Plan Graph"> </i><p></p>
+                <p></p><div class="legenz" id="leg_mkd"></div><a class="v-ellip" href="javascript:void(0);" onclick="toggle_line('show_markdown_line')" id="show_markdown_line" style="font-weight:bold;">Markdowns Plan</a><i class="icon-pencil drawicons tool_top" onclick="begin_drawing(this, 'markdowns_plan');" data-original-title="Draw Markdowns Plan Graph"> </i><p></p>
+                <p></p><div class="legenz" id="leg_rcv"></div><a class="v-ellip" href="javascript:void(0);" onclick="toggle_line('show_receiving_line')" id="show_receiving_line" style="font-weight:bold;">Receivings Plan</a><p></p>
+            </div>
+            <div id="graph">
+                <canvas id="plannerCanvas" width="1000px" height="270px" style="visibility:hidden;position:absolute;top:20px;"></canvas>
+                <div id="chartcontainer" style="position:relative;top:0;width:970px;height:300px;padding:0;margin:0;"></div>
+            </div>
+        </div>
+    </body>
+</html>
